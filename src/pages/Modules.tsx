@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { MODULES, erpMasterData, dashboardStats } from "@/data/mock-data";
+import { MODULES, erpMasterData, dashboardStats, type ERPMasterItem } from "@/data/mock-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge, TypeBadge } from "@/components/StatusBadge";
 import { Progress } from "@/components/ui/progress";
+import FormDetailDialog from "@/components/FormDetailDialog";
 
 export default function Modules() {
   const [selectedModule, setSelectedModule] = useState<string>("Master");
