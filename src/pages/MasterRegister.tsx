@@ -121,6 +121,7 @@ export default function MasterRegister() {
           </TableBody>
         </Table>
       </div>
+      <FormDetailDialog item={selectedItem} open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }
