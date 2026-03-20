@@ -88,8 +88,8 @@ export default function Modules() {
               </TableHeader>
               <TableBody>
                 {moduleForms.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-mono text-xs text-primary">{item.originalId}</TableCell>
+                  <TableRow key={item.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openDetail(item)}>
+                    <TableCell className="font-mono text-xs text-primary underline decoration-dotted underline-offset-2 hover:text-primary/80">{item.originalId}</TableCell>
                     <TableCell className="text-sm">{item.displayName}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{item.subModule}</TableCell>
                     <TableCell><StatusBadge status={item.status} /></TableCell>
