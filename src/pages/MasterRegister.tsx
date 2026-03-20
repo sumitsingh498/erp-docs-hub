@@ -14,6 +14,13 @@ export default function MasterRegister() {
   const [moduleFilter, setModuleFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedItem, setSelectedItem] = useState<ERPMasterItem | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const openDetail = (item: ERPMasterItem) => {
+    setSelectedItem(item);
+    setDialogOpen(true);
+  };
 
   const filtered = useMemo(() => {
     return erpMasterData.filter((item) => {
