@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { dashboardStats } from "@/data/mock-data";
+import { useStore } from "@/data/issues-requirements-store";
 import {
   Database, FileText, LayoutGrid, AlertTriangle,
-  CheckCircle2, Clock, XCircle, Layers,
+  CheckCircle2, Clock, XCircle, Layers, ClipboardList, Bug,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Link } from "react-router-dom";
 
 const kpiCards = [
   { label: "Total Objects", value: dashboardStats.totalObjects, icon: Database, color: "text-primary" },
@@ -25,7 +28,25 @@ const statusIcons: Record<string, typeof CheckCircle2> = {
 
 const barColors = ["#2563eb", "#0891b2", "#059669", "#d97706", "#dc2626", "#7c3aed", "#6366f1", "#ec4899", "#14b8a6"];
 
+const sevColors: Record<string, string> = {
+  Critical: "bg-red-500/15 text-red-700",
+  High: "bg-orange-500/15 text-orange-700",
+  Medium: "bg-yellow-500/15 text-yellow-700",
+  Low: "bg-green-500/15 text-green-700",
+};
+
+const reqStatusColors: Record<string, string> = {
+  Open: "bg-blue-500/15 text-blue-700",
+  "In Progress": "bg-amber-500/15 text-amber-700",
+};
+
 export default function Dashboard() {
+  const { requirements, issues } = useStore();
+
+  const pendingReqs = requirements.filter((r) => r.status === "Open" || r.status === "In Progress");
+  const openIssues = issues.filter((i) => i.status === "Open" || i.status === "In Progress");
+  const criticalIssues = issues.filter((i) => i.severity === "Critical" && i.status !== "Closed" && i.status !== "Resolved");
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       <div>
@@ -46,6 +67,94 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Pending Requirements & Issues Row */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Pending Requirements */}
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <ClipboardList size={16} className="text-primary" />
+                Pending Requirements
+                <Badge variant="secondary" className="text-[10px]">{pendingReqs.length}</Badge>
+              </CardTitle>
+              <Link to="/issues-requirements" className="text-xs text-primary hover:underline">View All →</Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-1.5 max-h-[260px] overflow-y-auto">
+            {pendingReqs.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">All requirements completed ✓</p>
+            ) : pendingReqs.slice(0, 6).map((req) => (
+              <div key={req.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] text-primary">{req.id}</span>
+                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${reqStatusColors[req.status] || ""}`}>{req.status}</Badge>
+                  </div>
+                  <div className="text-sm font-medium truncate">{req.title}</div>
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5">
+                    <Badge variant="outline" className="text-[9px] px-1">{req.linkedType}</Badge>
+                    <span>{req.linkedName}</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span>{req.module}</span>
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">{req.assignee}</span>
+              </div>
+            ))}
+            {pendingReqs.length > 6 && (
+              <Link to="/issues-requirements" className="block text-xs text-primary text-center pt-2 hover:underline">
+                +{pendingReqs.length - 6} more requirements
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Open Issues */}
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Bug size={16} className="text-destructive" />
+                Open Issues
+                <Badge variant="destructive" className="text-[10px]">{openIssues.length}</Badge>
+                {criticalIssues.length > 0 && (
+                  <Badge className="text-[10px] bg-red-500">{criticalIssues.length} Critical</Badge>
+                )}
+              </CardTitle>
+              <Link to="/issues-requirements" className="text-xs text-primary hover:underline">View All →</Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-1.5 max-h-[260px] overflow-y-auto">
+            {openIssues.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No open issues ✓</p>
+            ) : openIssues.slice(0, 6).map((iss) => (
+              <div key={iss.id} className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] text-destructive">{iss.id}</span>
+                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${sevColors[iss.severity] || ""}`}>{iss.severity}</Badge>
+                  </div>
+                  <div className="text-sm font-medium truncate">{iss.title}</div>
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5">
+                    <Badge variant="outline" className="text-[9px] px-1">{iss.linkedType}</Badge>
+                    <span>{iss.linkedName}</span>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span>{iss.module}</span>
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">{iss.assignee}</span>
+              </div>
+            ))}
+            {openIssues.length > 6 && (
+              <Link to="/issues-requirements" className="block text-xs text-primary text-center pt-2 hover:underline">
+                +{openIssues.length - 6} more issues
+              </Link>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">

@@ -10,69 +10,23 @@ import { Label } from "@/components/ui/label";
 import { StatusBadge, PriorityBadge, TypeBadge } from "@/components/StatusBadge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Save, AlertTriangle, ClipboardList, FileText, Settings2, Trash2, Calendar, User } from "lucide-react";
+import { Plus, Save, AlertTriangle, ClipboardList, Settings2, Trash2, Calendar } from "lucide-react";
+import { useStore, type ReqStatus, type IssueStatus, type IssueSeverity } from "@/data/issues-requirements-store";
 import type { ERPMasterItem, ERPStatus, Priority } from "@/data/mock-data";
 
-export interface Requirement {
-  id: string;
-  title: string;
-  description: string;
-  priority: Priority;
-  status: "Open" | "In Progress" | "Completed" | "Deferred";
-  assignee: string;
-  createdAt: string;
-}
-
-export interface Issue {
-  id: string;
-  title: string;
-  description: string;
-  severity: "Critical" | "High" | "Medium" | "Low";
-  status: "Open" | "In Progress" | "Resolved" | "Closed";
-  reportedBy: string;
-  assignee: string;
-  createdAt: string;
-}
-
-// Seed some sample requirements/issues per form
-const sampleRequirements: Record<string, Requirement[]> = {
-  "1": [
-    { id: "REQ-001", title: "Add HSN code validation", description: "HSN code must be validated against government master list before saving.", priority: "High", status: "In Progress", assignee: "Rajesh K.", createdAt: "2026-02-10" },
-    { id: "REQ-002", title: "Bulk item upload support", description: "Allow uploading items via Excel with error report.", priority: "Medium", status: "Open", assignee: "Amit S.", createdAt: "2026-02-18" },
-  ],
-  "2": [
-    { id: "REQ-003", title: "Barcode scanning integration", description: "Physical stock verification should support barcode scanner input.", priority: "High", status: "Open", assignee: "Amit S.", createdAt: "2026-03-01" },
-  ],
-  "3": [
-    { id: "REQ-004", title: "Approval workflow for adjustments", description: "FG adjustments above ₹50,000 need manager approval before posting.", priority: "High", status: "In Progress", assignee: "Priya M.", createdAt: "2026-02-25" },
-  ],
-};
-
-const sampleIssues: Record<string, Issue[]> = {
-  "1": [
-    { id: "ISS-001", title: "Duplicate item code allowed", description: "System allows saving duplicate item codes when created simultaneously by two users.", severity: "Critical", status: "Open", reportedBy: "Vikram T.", assignee: "Rajesh K.", createdAt: "2026-03-12" },
-  ],
-  "3": [
-    { id: "ISS-002", title: "GL posting fails for negative adjustments", description: "Negative adjustment entries are not generating correct GL debit/credit entries.", severity: "High", status: "In Progress", reportedBy: "Priya M.", assignee: "Suresh R.", createdAt: "2026-03-15" },
-    { id: "ISS-003", title: "Remarks field truncated at 100 chars", description: "Users report remarks are cut off. DB column needs to be extended.", severity: "Medium", status: "Open", reportedBy: "Neha G.", assignee: "Amit S.", createdAt: "2026-03-18" },
-  ],
-};
-
-const severityColors: Record<string, string> = {
+const sevColors: Record<string, string> = {
   Critical: "bg-red-500/15 text-red-700 border-red-200",
   High: "bg-orange-500/15 text-orange-700 border-orange-200",
   Medium: "bg-yellow-500/15 text-yellow-700 border-yellow-200",
   Low: "bg-green-500/15 text-green-700 border-green-200",
 };
-
 const reqStatusColors: Record<string, string> = {
   Open: "bg-blue-500/15 text-blue-700 border-blue-200",
   "In Progress": "bg-amber-500/15 text-amber-700 border-amber-200",
   Completed: "bg-green-500/15 text-green-700 border-green-200",
   Deferred: "bg-muted text-muted-foreground border-border",
 };
-
-const issueStatusColors: Record<string, string> = {
+const issStatusColors: Record<string, string> = {
   Open: "bg-red-500/15 text-red-700 border-red-200",
   "In Progress": "bg-amber-500/15 text-amber-700 border-amber-200",
   Resolved: "bg-green-500/15 text-green-700 border-green-200",
@@ -88,21 +42,20 @@ interface Props {
 
 export default function FormDetailDialog({ item, open, onOpenChange, onSave }: Props) {
   const [editData, setEditData] = useState<ERPMasterItem | null>(null);
-  const [requirements, setRequirements] = useState<Requirement[]>([]);
-  const [issues, setIssues] = useState<Issue[]>([]);
   const [showNewReq, setShowNewReq] = useState(false);
   const [showNewIssue, setShowNewIssue] = useState(false);
   const [newReq, setNewReq] = useState({ title: "", description: "", priority: "Medium" as Priority, assignee: "" });
-  const [newIssue, setNewIssue] = useState({ title: "", description: "", severity: "Medium" as Issue["severity"], assignee: "" });
+  const [newIssue, setNewIssue] = useState({ title: "", description: "", severity: "Medium" as IssueSeverity, assignee: "" });
 
-  // Sync state when item changes
+  const { requirements, issues, addRequirement, addIssue, removeRequirement, removeIssue, updateRequirementStatus, updateIssueStatus } = useStore();
+
   const currentItem = editData?.id === item?.id ? editData : item;
+  const itemReqs = requirements.filter((r) => r.linkedId === currentItem?.originalId);
+  const itemIssues = issues.filter((i) => i.linkedId === currentItem?.originalId);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && item) {
       setEditData({ ...item });
-      setRequirements(sampleRequirements[item.id] || []);
-      setIssues(sampleIssues[item.id] || []);
       setShowNewReq(false);
       setShowNewIssue(false);
     }
@@ -114,48 +67,44 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
   };
 
   const handleSave = () => {
-    if (editData && onSave) {
-      onSave({ ...editData, updatedAt: new Date().toISOString().split("T")[0] });
-    }
+    if (editData && onSave) onSave({ ...editData, updatedAt: new Date().toISOString().split("T")[0] });
     onOpenChange(false);
   };
 
-  const addRequirement = () => {
-    if (!newReq.title.trim()) return;
-    const req: Requirement = {
-      id: `REQ-${String(requirements.length + 4).padStart(3, "0")}`,
+  const handleAddReq = () => {
+    if (!newReq.title.trim() || !currentItem) return;
+    addRequirement({
       ...newReq,
       status: "Open",
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setRequirements([...requirements, req]);
+      linkedType: currentItem.type === "FORM" ? "Form" : currentItem.type === "REPORT" ? "Report" : "General",
+      linkedId: currentItem.originalId,
+      linkedName: currentItem.displayName,
+      module: currentItem.module,
+    });
     setNewReq({ title: "", description: "", priority: "Medium", assignee: "" });
     setShowNewReq(false);
   };
 
-  const addIssue = () => {
-    if (!newIssue.title.trim()) return;
-    const iss: Issue = {
-      id: `ISS-${String(issues.length + 4).padStart(3, "0")}`,
+  const handleAddIssue = () => {
+    if (!newIssue.title.trim() || !currentItem) return;
+    addIssue({
       ...newIssue,
       status: "Open",
       reportedBy: "Current User",
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setIssues([...issues, iss]);
+      linkedType: currentItem.type === "FORM" ? "Form" : currentItem.type === "REPORT" ? "Report" : "General",
+      linkedId: currentItem.originalId,
+      linkedName: currentItem.displayName,
+      module: currentItem.module,
+    });
     setNewIssue({ title: "", description: "", severity: "Medium", assignee: "" });
     setShowNewIssue(false);
   };
-
-  const removeRequirement = (id: string) => setRequirements(requirements.filter((r) => r.id !== id));
-  const removeIssue = (id: string) => setIssues(issues.filter((i) => i.id !== id));
 
   if (!currentItem) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-0">
-        {/* Header */}
         <DialogHeader className="p-6 pb-3 border-b bg-muted/30">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
@@ -185,11 +134,11 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
             <TabsTrigger value="details" className="text-xs gap-1.5"><Settings2 size={13} />Details</TabsTrigger>
             <TabsTrigger value="requirements" className="text-xs gap-1.5">
               <ClipboardList size={13} />Requirements
-              {requirements.length > 0 && <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">{requirements.length}</Badge>}
+              {itemReqs.length > 0 && <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">{itemReqs.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="issues" className="text-xs gap-1.5">
               <AlertTriangle size={13} />Issues
-              {issues.length > 0 && <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{issues.length}</Badge>}
+              {itemIssues.length > 0 && <Badge variant="destructive" className="ml-1 text-[10px] px-1.5 py-0">{itemIssues.length}</Badge>}
             </TabsTrigger>
           </TabsList>
 
@@ -258,7 +207,6 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
               <p className="text-xs text-muted-foreground">Business requirements linked to this object</p>
               <Button size="sm" variant="outline" onClick={() => setShowNewReq(true)} className="gap-1.5 text-xs"><Plus size={13} />Add Requirement</Button>
             </div>
-
             {showNewReq && (
               <div className="border rounded-lg p-4 bg-muted/20 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -271,9 +219,7 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
                       <Label className="text-xs">Priority</Label>
                       <Select value={newReq.priority} onValueChange={(v) => setNewReq({ ...newReq, priority: v as Priority })}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {(["High", "Medium", "Low"] as Priority[]).map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
+                        <SelectContent>{(["High", "Medium", "Low"] as Priority[]).map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1">
@@ -288,12 +234,11 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button size="sm" variant="ghost" onClick={() => setShowNewReq(false)} className="text-xs">Cancel</Button>
-                  <Button size="sm" onClick={addRequirement} className="text-xs gap-1"><Plus size={12} />Add</Button>
+                  <Button size="sm" onClick={handleAddReq} className="text-xs gap-1"><Plus size={12} />Add</Button>
                 </div>
               </div>
             )}
-
-            {requirements.length > 0 ? (
+            {itemReqs.length > 0 ? (
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -307,7 +252,7 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {requirements.map((req) => (
+                    {itemReqs.map((req) => (
                       <TableRow key={req.id}>
                         <TableCell className="font-mono text-xs text-primary">{req.id}</TableCell>
                         <TableCell>
@@ -315,7 +260,16 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
                           <div className="text-xs text-muted-foreground line-clamp-1">{req.description}</div>
                         </TableCell>
                         <TableCell><PriorityBadge priority={req.priority} /></TableCell>
-                        <TableCell><Badge variant="outline" className={`text-[10px] ${reqStatusColors[req.status]}`}>{req.status}</Badge></TableCell>
+                        <TableCell>
+                          <Select value={req.status} onValueChange={(v) => updateRequirementStatus(req.id, v as ReqStatus)}>
+                            <SelectTrigger className="h-6 text-[10px] w-[85px] border-0 p-0 px-1">
+                              <Badge variant="outline" className={`text-[10px] ${reqStatusColors[req.status]}`}>{req.status}</Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(["Open", "In Progress", "Completed", "Deferred"] as ReqStatus[]).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
                         <TableCell className="text-xs">{req.assignee}</TableCell>
                         <TableCell><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeRequirement(req.id)}><Trash2 size={12} className="text-muted-foreground" /></Button></TableCell>
                       </TableRow>
@@ -338,7 +292,6 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
               <p className="text-xs text-muted-foreground">Bugs, defects, and issues reported against this object</p>
               <Button size="sm" variant="outline" onClick={() => setShowNewIssue(true)} className="gap-1.5 text-xs"><Plus size={13} />Report Issue</Button>
             </div>
-
             {showNewIssue && (
               <div className="border rounded-lg p-4 bg-destructive/5 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -349,11 +302,9 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <Label className="text-xs">Severity</Label>
-                      <Select value={newIssue.severity} onValueChange={(v) => setNewIssue({ ...newIssue, severity: v as Issue["severity"] })}>
+                      <Select value={newIssue.severity} onValueChange={(v) => setNewIssue({ ...newIssue, severity: v as IssueSeverity })}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {(["Critical", "High", "Medium", "Low"] as Issue["severity"][]).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
+                        <SelectContent>{(["Critical", "High", "Medium", "Low"] as IssueSeverity[]).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1">
@@ -368,12 +319,11 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button size="sm" variant="ghost" onClick={() => setShowNewIssue(false)} className="text-xs">Cancel</Button>
-                  <Button size="sm" variant="destructive" onClick={addIssue} className="text-xs gap-1"><AlertTriangle size={12} />Report</Button>
+                  <Button size="sm" variant="destructive" onClick={handleAddIssue} className="text-xs gap-1"><AlertTriangle size={12} />Report</Button>
                 </div>
               </div>
             )}
-
-            {issues.length > 0 ? (
+            {itemIssues.length > 0 ? (
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -382,22 +332,29 @@ export default function FormDetailDialog({ item, open, onOpenChange, onSave }: P
                       <TableHead className="text-[11px]">Title</TableHead>
                       <TableHead className="text-[11px] w-[80px]">Severity</TableHead>
                       <TableHead className="text-[11px] w-[90px]">Status</TableHead>
-                      <TableHead className="text-[11px] w-[80px]">Reported</TableHead>
                       <TableHead className="text-[11px] w-[80px]">Assignee</TableHead>
                       <TableHead className="text-[11px] w-[40px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {issues.map((iss) => (
+                    {itemIssues.map((iss) => (
                       <TableRow key={iss.id}>
                         <TableCell className="font-mono text-xs text-destructive">{iss.id}</TableCell>
                         <TableCell>
                           <div className="text-sm font-medium">{iss.title}</div>
                           <div className="text-xs text-muted-foreground line-clamp-1">{iss.description}</div>
                         </TableCell>
-                        <TableCell><Badge variant="outline" className={`text-[10px] ${severityColors[iss.severity]}`}>{iss.severity}</Badge></TableCell>
-                        <TableCell><Badge variant="outline" className={`text-[10px] ${issueStatusColors[iss.status]}`}>{iss.status}</Badge></TableCell>
-                        <TableCell className="text-xs">{iss.reportedBy}</TableCell>
+                        <TableCell><Badge variant="outline" className={`text-[10px] ${sevColors[iss.severity]}`}>{iss.severity}</Badge></TableCell>
+                        <TableCell>
+                          <Select value={iss.status} onValueChange={(v) => updateIssueStatus(iss.id, v as IssueStatus)}>
+                            <SelectTrigger className="h-6 text-[10px] w-[85px] border-0 p-0 px-1">
+                              <Badge variant="outline" className={`text-[10px] ${issStatusColors[iss.status]}`}>{iss.status}</Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(["Open", "In Progress", "Resolved", "Closed"] as IssueStatus[]).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
                         <TableCell className="text-xs">{iss.assignee}</TableCell>
                         <TableCell><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeIssue(iss.id)}><Trash2 size={12} className="text-muted-foreground" /></Button></TableCell>
                       </TableRow>

@@ -11,6 +11,7 @@ import Modules from "@/pages/Modules";
 import Reports from "@/pages/Reports";
 import TechnicalMapping from "@/pages/TechnicalMapping";
 import Settings from "@/pages/Settings";
+import IssuesRequirements from "@/pages/IssuesRequirements";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/modules" element={<Modules />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/technical-mapping" element={<TechnicalMapping />} />
+            <Route path="/issues-requirements" element={<IssuesRequirements />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<NotFound />} />

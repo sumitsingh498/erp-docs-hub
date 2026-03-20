@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Database, GitBranch, FolderOpen,
-  FileText, Code2, Shield, ChevronLeft, ChevronRight,
+  FileText, Code2, Shield, ChevronLeft, ChevronRight, AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ const navItems = [
   { path: "/menu-tree", label: "Menu Tree", icon: GitBranch },
   { path: "/modules", label: "Modules", icon: FolderOpen },
   { path: "/reports", label: "Reports", icon: FileText },
+  { path: "/issues-requirements", label: "Issues & Reqs", icon: AlertTriangle },
   { path: "/technical-mapping", label: "Technical Mapping", icon: Code2 },
   { path: "/settings", label: "Settings & RBAC", icon: Shield },
 ];
