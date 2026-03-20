@@ -11,6 +11,7 @@ import Modules from "@/pages/Modules";
 import Reports from "@/pages/Reports";
 import TechnicalMapping from "@/pages/TechnicalMapping";
 import Settings from "@/pages/Settings";
+import IssuesRequirements from "@/pages/IssuesRequirements";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
